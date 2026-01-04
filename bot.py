@@ -69,7 +69,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Credentials Validated. Enter your **Phone Number** (+91...).")
         state['step'] = 'PHONE'
 
-        elif state['step'] == 'PHONE':
+    elif state['step'] == 'PHONE':
         state['phone'] = text
         await update.message.reply_text("📩 **OTP Sent.** Enter the code from your Telegram app.")
         
