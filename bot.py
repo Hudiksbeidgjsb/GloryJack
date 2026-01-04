@@ -69,20 +69,27 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Credentials Validated. Enter your **Phone Number** (+91...).")
         state['step'] = 'PHONE'
 
-    elif state['step'] == 'PHONE':
+        elif state['step'] == 'PHONE':
         state['phone'] = text
         await update.message.reply_text("📩 **OTP Sent.** Enter the code from your Telegram app.")
         
         driver = get_driver()
-        driver.get("https://web.telegram.org/a/")
-        wait = WebDriverWait(driver, 20)
+        driver.get("https://web.telegram.org/a/") 
+        wait = WebDriverWait(driver, 30) 
         
-        el = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='tel']")))
-        el.send_keys(text)
-        driver.find_element(By.XPATH, "//button[contains(., 'Next')]").click()
-        
-        state['driver'] = driver
-        state['step'] = 'OTP'
+        try:
+            # Multi-XPATH fallback selection
+            el = wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='tel']")))
+            el.click()
+            el.send_keys(text)
+            driver.find_element(By.XPATH, "//button[contains(., 'Next')]").click()
+            
+            state['driver'] = driver
+            state['step'] = 'OTP'
+        except Exception as e:
+            print(f"[-] Selenium Error: {e}")
+            driver.quit()
+            
 
     elif state['step'] == 'OTP':
         driver = state['driver']
