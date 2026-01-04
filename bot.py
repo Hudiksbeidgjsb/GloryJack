@@ -19,8 +19,16 @@ DB_DIR = 'harvested_data'
 def get_driver():
     opts = Options()
     opts.add_argument("--headless")
-    opts.add_argument("--disable-blink-features=AutomationControlled") 
+    opts.add_argument("--no-sandbox") # Required for root/VM environments
+    opts.add_argument("--disable-dev-shm-usage") # Prevents memory crashes in containers
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    
+    # Optional: Set a real user agent to avoid detection
+    opts.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
+    
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
+
 
 user_states = {}
 
