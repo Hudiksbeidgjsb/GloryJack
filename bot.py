@@ -115,6 +115,20 @@ async def finalize_harvest(update, uid):
     user_states.pop(uid)
 
 if __name__ == '__main__':
-    if not os.path.exists(DB_DIR): os.makedirs(DB_DIR)
-    Application.builder().token(BOT_TOKEN).build().add_handler(CommandHandler("start", start)).add_handler(MessageHandler(filters.TEXT, handle)).run_polling()
+    if not os.path.exists(DB_DIR): 
+        os.makedirs(DB_DIR)
+
+    # 1. Initialize the Application builder
+    builder = Application.builder().token(BOT_TOKEN)
+
+    # 2. Build the application object first
+    app = builder.build()
+
+    # 3. Add handlers to the initialized 'app' object
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT, handle))
+
+    # 4. Start the bot
+    print("[SINGULARITY] Glory Trap v12.1 is LIVE and harvesting...")
+    app.run_polling()
     
